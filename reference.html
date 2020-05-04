@@ -159,11 +159,12 @@
 	<dt>terrainOpacity</dt>
 	<dd><span>float</span>The opacity of the terrain between 0 (fully transparent) and 1 (opaque) <span>default: 0.5</span></dd>
 	<dt>terrainShading</dt>
-	<dd><span>enummeration</span>shading appplied to the terrain surface:
+	<dd><span>enummeration</span> or <span>string</span>shading appplied to the terrain surface:
 		<dl>
-			<dt>CV2.SHADING_SHADED</dt><dd>The terrain is shaded by inclination.</dd>
-			<dt>CV2.SHADING_HEIGHT</dt><dd>The terrain is shaded by height.</dd>
-			<dt>CV2.SHADING_OVERLAY</dt><dd>A overlay image or set of images is displayed on the terrain*.</dd>
+			<dt>CV2.SHADING_RELIEF</dt><dd>Hypsometric shading (default).</dd>
+			<dt>CV2.SHADING_CONTOURS</dt><dd>The terrain is contoured in 10m intervals (interval and colours are themable).</dd>
+			<dt>CV2.SHADING_OVERLAY</dt><dd>Overlay provided in a .lox model*.</dd>
+			<dt>overlay name</dt><dd>string identifying an overlay by name (Survex only).</dd>
 		</dl>
 		<p>*Therion .lox models may contain an overlay image. If a external terrain is provided for a Survex .3d model, image tiles from a 'slippy map' tile server may be used.</p>
 	</dd>
