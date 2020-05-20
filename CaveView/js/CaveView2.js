@@ -4,163 +4,15 @@
 	(global = global || self, factory(global.CV2 = {}));
 }(this, (function (exports) { 'use strict';
 
-	// polyfill padStart for IE11 - now supported for Chrome, FireFox and Edge
-	if ( Math.log2 === undefined ) {
+	var scope;
 
-		// Missing in IE
-		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/log2
-
-		Math.log2 = function ( value ) {
-
-			return Math.log( value ) * Math.LOG2E;
-
-		};
-
+	if ( self ) {
+		scope = self;
+	} else {
+		scope = window;
 	}
 
-	// https://tc39.github.io/ecma262/#sec-array.prototype.find
-	if ( ! Array.prototype.find ) {
-
-		Object.defineProperty( Array.prototype, 'find', {
-			value: function( predicate ) {
-
-				// 1. Let O be ? ToObject(this value).
-				if ( this == null ) {
-					throw new TypeError( '"this" is null or not defined' );
-				}
-
-				var o = Object( this );
-
-				// 2. Let len be ? ToLength(? Get(O, "length")).
-				var len = o.length >>> 0;
-
-				// 3. If IsCallable(predicate) is false, throw a TypeError exception.
-				if ( typeof predicate !== 'function' ) {
-					throw new TypeError( 'predicate must be a function' );
-				}
-
-				// 4. If thisArg was supplied, let T be thisArg; else let T be undefined.
-				var thisArg = arguments[ 1 ];
-
-				// 5. Let k be 0.
-				var k = 0;
-
-				// 6. Repeat, while k < len
-				while ( k < len ) {
-
-					// a. Let Pk be ! ToString(k).
-					// b. Let kValue be ? Get(O, Pk).
-					// c. Let testResult be ToBoolean(? Call(predicate, T, « kValue, k, O »)).
-					// d. If testResult is true, return kValue.
-
-					var kValue = o[ k ];
-					if ( predicate.call( thisArg, kValue, k, o ) ) {
-
-						return kValue;
-
-					}
-
-					// e. Increase k by 1.
-					k++;
-				}
-
-				// 7. Return undefined.
-				return undefined;
-			},
-			configurable: true,
-			writable: true
-		} );
-	}
-
-	if ( ! String.prototype.startsWith ) {
-
-		String.prototype.startsWith = function( searchString, position ) {
-
-			return this.substr( position || 0, searchString.length ) === searchString;
-
-		};
-
-	}
-
-	if ( ! String.prototype.padStart ) {
-
-		String.prototype.padStart = function padStart( targetLength, padString ) {
-
-			targetLength = targetLength >> 0; //floor if number or convert non-number to 0;
-			padString = String( padString || ' ' );
-
-			if ( this.length > targetLength ) {
-
-				return String( this );
-
-			} else {
-
-				targetLength = targetLength - this.length;
-
-				if ( targetLength > padString.length ) {
-
-					padString += padString.repeat( targetLength / padString.length ); //append to original to ensure we are longer than needed
-
-				}
-
-				return padString.slice( 0, targetLength ) + String( this );
-
-			}
-
-		};
-
-	}
-
-	if ( ! String.prototype.repeat ) {
-
-		String.prototype.repeat = function( count ) {
-
-			if ( this == null ) throw new TypeError( 'can\'t convert ' + this + ' to object' );
-
-			var str = '' + this;
-
-			count = +count;
-
-			if ( count != count ) count = 0;
-
-			if ( count < 0 ) throw new RangeError( 'repeat count must be non-negative' );
-
-			if ( count == Infinity ) throw new RangeError( 'repeat count must be less than infinity' );
-
-			count = Math.floor( count );
-
-			if ( str.length == 0 || count == 0 ) return '';
-
-			// Ensuring count is a 31-bit integer allows us to heavily optimize the
-			// main part. But anyway, most current (August 2014) browsers can't handle
-			// strings 1 << 28 chars or longer, so:
-
-			if ( str.length * count >= 1 << 28 ) throw new RangeError( 'repeat count must not overflow maximum string size' );
-
-			var rpt = '';
-
-			for ( ;; ) {
-
-				if ( ( count & 1 ) == 1 ) rpt += str;
-
-				count >>>= 1;
-
-				if ( count == 0 ) break;
-
-				str += str;
-
-			}
-
-			// Could we try:
-			// return Array(count + 1).join(this);
-
-			return rpt;
-
-		};
-
-	}
-
-	if ( window.TextDecoder === undefined ) {
+	if ( scope.TextDecoder === undefined ) {
 
 		var TextDecoder$1 = function () {};
 
@@ -181,13 +33,7 @@
 
 		};
 
-		window.TextDecoder = TextDecoder$1;
-
-	}
-
-	if ( ! Float32Array.prototype.fill ) {
-
-		Float32Array.prototype.fill = Array.prototype.fill;
+		scope.TextDecoder = TextDecoder$1;
 
 	}
 
@@ -284,7 +130,7 @@
 
 	}
 
-	const VERSION = '2.1.test';
+	const VERSION = '2.1.test2';
 
 	const MATERIAL_LINE       = 1;
 	const MATERIAL_SURFACE    = 2;
@@ -313,7 +159,6 @@
 	const MOUSE_MODE_DISTANCE   = 2;
 	const MOUSE_MODE_TRACE_EDIT = 3;
 	const MOUSE_MODE_ENTRANCES  = 4;
-	const MOUSE_MODE_ANNOTATE   = 5;
 
 	// shading types
 
@@ -346,7 +191,6 @@
 	const FEATURE_TERRAIN       = 7;
 	const FEATURE_STATIONS      = 8;
 	const FEATURE_TRACES        = 9;
-	const FEATURE_ANNOTATIONS   = 10;
 	const FACE_WALLS            = 11;
 	const FACE_SCRAPS           = 12;
 	const LABEL_STATION         = 13;
@@ -31166,6 +31010,9 @@
 			div.style.height = height + 'px';
 			div.style.position = 'absolute';
 
+			div.setAttribute( 'draggable', 'false' );
+			div.addEventListener( 'dragstart', function ( e ) {e.preventDefault(); } );
+
 			div.addEventListener( 'mouseenter', onEnter );
 
 			return div;
@@ -31857,7 +31704,7 @@
 		const limits = terrain.boundingBox;
 		const range = limits.getSize( new Vector3() );
 		const gradient = ctx.cfg.value( 'saturatedGradient', false ) ? 'gradientHi' : 'gradientLow';
-		const colourCache = ctx.materials.colourCache;
+		const textureCache = ctx.materials.textureCache;
 
 		ShaderMaterial.call( this, {
 			vertexShader: Shaders.depthVertexShader,
@@ -31871,7 +31718,7 @@
 				scaleY:     { value: 1 / range.y },
 				rangeZ:     { value: range.z },
 				depthScale: { value: 1 / ( surveyLimits.max.z - surveyLimits.min.z ) },
-				cmap:       { value: colourCache.getTexture( gradient ) },
+				cmap:       { value: textureCache.getTexture( gradient ) },
 				depthMap:   { value: terrain.depthTexture },
 			}, ctx.materials.commonUniforms, ctx.materials.commonDepthUniforms ),
 			defines: {
@@ -31970,105 +31817,37 @@
 
 	DepthMapMaterial.prototype = Object.create( ShaderMaterial.prototype );
 
-	function HeightMaterial ( ctx, type, survey ) {
+	function ExtendedPointsMaterial ( ctx ) {
 
-		const limits = survey.modelLimits;
+		PointsMaterial.call( this );
 
-		const zMin = limits.min.z;
-		const zMax = limits.max.z;
-		const gradient = ctx.cfg.value( 'saturatedGradient', false ) ? 'gradientHi' : 'gradientLow';
 		const colourCache = ctx.materials.colourCache;
+		const textureCache = ctx.materials.textureCache;
 
-		this.midRange = ( zMax + zMin ) / 2;
+		this.map = textureCache.getTexture( 'disc' );
+		this.color = colourCache.white;
+		this.opacity = 1.0;
+		this.alphaTest = 0.8;
 
-		ShaderMaterial.call( this, {
-			vertexShader: Shaders.heightVertexShader,
-			fragmentShader: Shaders.heightFragmentShader,
-			type: 'CV.HeightMaterial',
-			uniforms: Object.assign( {
-				uLight: { value: survey.lightDirection },
-				minZ:   { value: zMin },
-				scaleZ: { value: 1 / ( zMax - zMin ) },
-				cmap:   { value: colourCache.getTexture( gradient ) },
-			}, ctx.materials.commonUniforms ),
-			defines: {
-				USE_COLOR: true,
-				SURFACE: ( type !== MATERIAL_LINE )
-			}
-		} );
-
-		return this;
-
-	}
-
-	HeightMaterial.prototype = Object.create( ShaderMaterial.prototype );
-
-	const fragment_pars$1 = [
-		'uniform sampler2D cmap;',
-		'varying float zMap;',
-		Shaders.commonTerrainCodePars
-	].join( '\n' );
-
-	const fragment_color$1 = [
-		'diffuseColor = texture2D( cmap, vec2( 1.0 - zMap, 1.0 ) );',
-		'diffuseColor.a = opacity;',
-		Shaders.commonTerrainCodeColor
-	].join( '\n' );
-
-	function HypsometricMaterial ( ctx, survey ) {
-
-		const cfg = ctx.cfg;
-		const terrain = survey.terrain;
-		const colourCache = ctx.materials.colourCache;
-
-		MeshLambertMaterial.call( this );
-
-		var zMin = cfg.themeValue( 'shading.hypsometric.min' );
-		var zMax = cfg.themeValue( 'shading.hypsometric.max' );
-
-		if ( terrain.boundBox === undefined ) terrain.computeBoundingBox();
-
-		if ( zMin === undefined ) zMin = terrain.boundingBox.min.z;
-		if ( zMax === undefined ) zMax = terrain.boundingBox.max.z;
-
-		this.transparent = true;
+		this.sizeAttenuation = false;
+		this.transparent = true; // to ensure points rendered over lines.
+		this.vertexColors = true;
 
 		this.onBeforeCompile = function ( shader ) {
 
-			Object.assign(
-				shader.uniforms,
-				ctx.materials.commonTerrainUniforms,
-				{
-					minZ:   { value: zMin },
-					scaleZ: { value: 1 / ( zMax - zMin ) },
-					cmap:   { value: colourCache.getTexture( 'hypsometric' ) }
-				}
-			);
-
 			var vertexShader = shader.vertexShader
-				.replace( '#include <common>', '\nuniform float minZ;\nuniform float scaleZ;\nvarying float zMap;\nvarying vec2 vPosition;\n$&' )
-				.replace( 'include <begin_vertex>', '$&\nvPosition = vec2( position.x, position.y );\nzMap = saturate( ( position.z - minZ ) * scaleZ );' );
-
-			var fragmentShader = shader.fragmentShader
-				.replace( '#include <common>', '$&\n' + fragment_pars$1 + '\n' )
-				.replace( '#include <color_fragment>', fragment_color$1 );
+				.replace( '#include <common>', '\nattribute float pSize;\n\n$&' )
+				.replace( '\tgl_PointSize = size;', '\tgl_PointSize = pSize;' );
 
 			shader.vertexShader = vertexShader;
-			shader.fragmentShader = fragmentShader;
 
 		};
-
-		Object.defineProperty( this, 'opacity', {
-			get: function () { return ctx.materials.terrainOpacity; }
-		} );
 
 		return this;
 
 	}
 
-	HypsometricMaterial.prototype = Object.create( MeshLambertMaterial.prototype );
-
-	Object.assign( HypsometricMaterial.prototype, CommonTerrainMaterial.prototype );
+	ExtendedPointsMaterial.prototype = Object.create( PointsMaterial.prototype );
 
 	function GlyphMaterial ( ctx, glyphAtlas, rotation, viewer ) {
 
@@ -32126,6 +31905,106 @@
 
 	};
 
+	function HeightMaterial ( ctx, type, survey ) {
+
+		const limits = survey.modelLimits;
+
+		const zMin = limits.min.z;
+		const zMax = limits.max.z;
+		const gradient = ctx.cfg.value( 'saturatedGradient', false ) ? 'gradientHi' : 'gradientLow';
+		const textureCache = ctx.materials.textureCache;
+
+		this.midRange = ( zMax + zMin ) / 2;
+
+		ShaderMaterial.call( this, {
+			vertexShader: Shaders.heightVertexShader,
+			fragmentShader: Shaders.heightFragmentShader,
+			type: 'CV.HeightMaterial',
+			uniforms: Object.assign( {
+				uLight: { value: survey.lightDirection },
+				minZ:   { value: zMin },
+				scaleZ: { value: 1 / ( zMax - zMin ) },
+				cmap:   { value: textureCache.getTexture( gradient ) },
+			}, ctx.materials.commonUniforms ),
+			defines: {
+				USE_COLOR: true,
+				SURFACE: ( type !== MATERIAL_LINE )
+			}
+		} );
+
+		return this;
+
+	}
+
+	HeightMaterial.prototype = Object.create( ShaderMaterial.prototype );
+
+	const fragment_pars$1 = [
+		'uniform sampler2D cmap;',
+		'varying float zMap;',
+		Shaders.commonTerrainCodePars
+	].join( '\n' );
+
+	const fragment_color$1 = [
+		'diffuseColor = texture2D( cmap, vec2( 1.0 - zMap, 1.0 ) );',
+		'diffuseColor.a = opacity;',
+		Shaders.commonTerrainCodeColor
+	].join( '\n' );
+
+	function HypsometricMaterial ( ctx, survey ) {
+
+		const cfg = ctx.cfg;
+		const terrain = survey.terrain;
+		const textureCache = ctx.materials.textureCache;
+
+		MeshLambertMaterial.call( this );
+
+		var zMin = cfg.themeValue( 'shading.hypsometric.min' );
+		var zMax = cfg.themeValue( 'shading.hypsometric.max' );
+
+		if ( terrain.boundBox === undefined ) terrain.computeBoundingBox();
+
+		if ( zMin === undefined ) zMin = terrain.boundingBox.min.z;
+		if ( zMax === undefined ) zMax = terrain.boundingBox.max.z;
+
+		this.transparent = true;
+
+		this.onBeforeCompile = function ( shader ) {
+
+			Object.assign(
+				shader.uniforms,
+				ctx.materials.commonTerrainUniforms,
+				{
+					minZ:   { value: zMin },
+					scaleZ: { value: 1 / ( zMax - zMin ) },
+					cmap:   { value: textureCache.getTexture( 'hypsometric' ) }
+				}
+			);
+
+			var vertexShader = shader.vertexShader
+				.replace( '#include <common>', '\nuniform float minZ;\nuniform float scaleZ;\nvarying float zMap;\nvarying vec2 vPosition;\n$&' )
+				.replace( 'include <begin_vertex>', '$&\nvPosition = vec2( position.x, position.y );\nzMap = saturate( ( position.z - minZ ) * scaleZ );' );
+
+			var fragmentShader = shader.fragmentShader
+				.replace( '#include <common>', '$&\n' + fragment_pars$1 + '\n' )
+				.replace( '#include <color_fragment>', fragment_color$1 );
+
+			shader.vertexShader = vertexShader;
+			shader.fragmentShader = fragmentShader;
+
+		};
+
+		Object.defineProperty( this, 'opacity', {
+			get: function () { return ctx.materials.terrainOpacity; }
+		} );
+
+		return this;
+
+	}
+
+	HypsometricMaterial.prototype = Object.create( MeshLambertMaterial.prototype );
+
+	Object.assign( HypsometricMaterial.prototype, CommonTerrainMaterial.prototype );
+
 	function MissingMaterial ( ctx ) {
 
 		MeshLambertMaterial.call( this, { color: 0xff8888} );
@@ -32164,10 +32043,52 @@
 
 	function ColourCache ( ) {
 
-		const caches = {
-			'colors': [],
-			'texture' : []
+		const cache = [];
+
+		function createColors ( scale ) {
+
+			const cache = [];
+
+			for ( var i = 0, l = scale.length; i < l; i++ ) {
+
+				let c = scale[ i ];
+
+				cache[ i ] = new Color( c[ 0 ] / 255, c[ 1 ] / 255, c[ 2 ] / 255 );
+
+			}
+
+			return cache;
+
+		}
+
+		this.getColors = function ( name ) {
+
+			var entry = cache[ name ];
+
+			if ( entry === undefined ) {
+
+				const scale = Colours[ name ];
+
+				if ( scale === undefined ) console.error( 'unknown colour scale requested ' + name );
+
+				entry = createColors( scale );
+				cache[ name ] = entry;
+
+			}
+
+			return entry;
+
 		};
+
+		this.white = new Color( 0xffffff );
+
+	}
+
+	// define colors to share THREE.color objects
+
+	function TextureCache () {
+
+		const cache = [];
 
 		function createTexture ( scale ) {
 
@@ -32197,56 +32118,33 @@
 
 		}
 
-		function createColors ( scale ) {
-
-			const cache = [];
-
-			for ( var i = 0, l = scale.length; i < l; i++ ) {
-
-				let c = scale[ i ];
-
-				cache[ i ] = new Color( c[ 0 ] / 255, c[ 1 ] / 255, c[ 2 ] / 255 );
-
-			}
-
-			return cache;
-
-		}
-
-		function getCacheEntry( cacheName, createFunc, name ) {
-
-			const cache = caches[ cacheName ];
+		this.getTexture = function ( name ) {
 
 			var entry = cache[ name ];
 
 			if ( entry === undefined ) {
 
-				const scale = Colours[ name ];
+				if ( name === 'disc' ) {
 
-				if ( scale === undefined ) console.error( 'unknown colour scale requested ' + name );
+					entry = new TextureLoader().load( "data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' width='32mm' height='32mm' version='1.1' viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' %3E%3Ccircle id='d' cx='16' cy='16' r='14' color='%23000000' fill='%23fff' fill-rule='evenodd' stroke-width='0'/%3E%3C/svg%3E%0A" );
 
-				entry = createFunc( scale );
+				} else {
+
+					const scale = Colours[ name ];
+
+					if ( scale === undefined ) console.error( 'unknown colour scale requested ' + name );
+
+					entry = createTexture( scale );
+
+				}
+
 				cache[ name ] = entry;
 
 			}
 
 			return entry;
 
-		}
-
-		this.getTexture = function ( name ) {
-
-			return getCacheEntry( 'texture', createTexture, name );
-
 		};
-
-		this.getColors = function ( name ) {
-
-			return getCacheEntry( 'colors', createColors, name );
-
-		};
-
-		this.white = new Color( 0xffffff );
 
 	}
 
@@ -32399,8 +32297,10 @@
 		var survey;
 
 		const colourCache = new ColourCache();
+		const textureCache = new TextureCache();
 
 		this.colourCache = colourCache;
+		this.textureCache = textureCache;
 
 		const gradientType = ctx.cfg.value( 'saturatedGradient', false ) || ctx.cfg.themeValue( 'saturatedGradient' );
 		const gradient = gradientType ? 'gradientHi' : 'gradientLow';
@@ -32584,9 +32484,16 @@
 
 		};
 
+		this.getExtendedPointsMaterial = function () {
+
+			const func = function () { return new ExtendedPointsMaterial( ctx ); };
+			return getCacheMaterial( 'extendedPoints', func, true );
+
+		};
+
 		this.getMissingMaterial = function () {
 
-			const func = function () { return new MissingMaterial( ctx, { transparent: true, opacity: 0.5, color: 0xff8888 } ); };
+			const func = function () { return new MissingMaterial( ctx ); };
 			return getCacheMaterial( 'missing', func );
 
 		};
@@ -32607,7 +32514,7 @@
 
 		this.getScaleMaterial = function () {
 
-			const func = function () { return new MeshBasicMaterial( { color: 0xffffff, map: colourCache.getTexture( gradient ) } ); };
+			const func = function () { return new MeshBasicMaterial( { color: 0xffffff, map: textureCache.getTexture( gradient ) } ); };
 			return getCacheMaterial( 'scale', func );
 
 		};
@@ -33710,55 +33617,26 @@
 		this.groups = [];
 		this.cave = cave;
 		this.stationMap = new Map();
+		this.dataStream = dataStream;
 
 		var pos = 0; // file position
 
 		// read file header
 
 		readLF(); // Survex 3D Image File
-		const version = readLF(); // 3d version
+		this.version = readLF(); // 3d version
 		const auxInfo = readNSLF();
 		readLF(); // Date
 
 		var sourceCRS = ( auxInfo[ 1 ] === undefined ) ? null : auxInfo[ 1 ]; // coordinate reference system ( proj4 format )
 
-		console.log( 'Survex .3d version ', version );
+		console.log( 'Survex .3d version ', this.version );
 
-		cave.setCRS( sourceCRS );
+		this.pos = pos;
 
-		switch ( version ) {
+		return cave.setCRS( sourceCRS ).then( this.parse2.bind( this ) );
 
-		case 'Bv0.01':
-
-			this.handleOld( dataStream, pos, 1 );
-
-			break;
-
-		case 'v3':
-		case 'v4':
-		case 'v5':
-		case 'v6':
-		case 'v7':
-		case 'v8':
-
-			this.handleVx( dataStream, pos, Number( version.charAt( 1 ) ), section );
-
-			break;
-
-		default:
-
-			throw new Error( 'unsupported .3d version ' + version );
-
-		}
-
-		// if pre selecting a section - trim returned surveyTree
-		if ( this.section !== null ) cave.surveyTree.trim( this.section.split( '.' ) );
-
-		cave.addStations( this.stationMap );
-
-		cave.addLineSegments( this.groups );
-
-		return;
+		//return this.parse2();
 
 		function readLF () { // read until Line feed
 
@@ -33797,6 +33675,48 @@
 
 	};
 
+	Svx3dHandler.prototype.parse2 = function () {
+
+		const cave = this.cave;
+
+		var pos = this.pos;
+
+		switch ( this.version ) {
+
+		case 'Bv0.01':
+
+			this.handleOld( this.dataStream, pos, 1 );
+
+			break;
+
+		case 'v3':
+		case 'v4':
+		case 'v5':
+		case 'v6':
+		case 'v7':
+		case 'v8':
+
+			this.handleVx( this.dataStream, pos, Number( this.version.charAt( 1 ) ), this.section );
+
+			break;
+
+		default:
+
+			throw new Error( 'unsupported .3d version ' + this.version );
+
+		}
+
+		// if pre selecting a section - trim returned surveyTree
+		if ( this.section !== null ) cave.surveyTree.trim( this.section.split( '.' ) );
+
+		cave.addStations( this.stationMap );
+
+		cave.addLineSegments( this.groups );
+
+		return cave;
+
+	};
+
 	Svx3dHandler.prototype.handleOld = function ( source, pos, version ) {
 
 		const cave       = this.cave;
@@ -33824,7 +33744,7 @@
 
 		// init cmd handler table with error handler for unsupported records or invalid records
 
-		function _errorHandler ( e ) { throw new Error( 'unhandled command: ', e.toString( 16 ) ); }
+		function _errorHandler ( e ) { throw new Error( 'unhandled command: ' + e.toString( 16 ) + ' @ ' + pos.toString( 16 ) ); }
 
 		for ( i = 0; i < 256; i++ ) {
 
@@ -34104,7 +34024,7 @@
 
 		// init cmd handler table with error handler for unsupported records or invalid records
 
-		function _errorHandler ( e ) { throw new Error( 'unhandled command: ', e.toString( 16 ) ); }
+		function _errorHandler ( e ) { throw new Error( 'unhandled command: ' + e.toString( 16 ) + ' @ ' + pos.toString( 16 ) ); }
 
 		for ( i = 0; i < 256; i++ ) {
 
@@ -34202,7 +34122,7 @@
 
 		}
 
-		if ( version === 6 ) {
+		if ( version >= 4 && version <= 6 ) {
 
 			cmd[ 0x20 ] = cmd_DATE_V4;
 			cmd[ 0x21 ] = cmd_DATE2_V4;
@@ -34878,7 +34798,7 @@
 
 		cave.addXsects( xSects );
 
-		return this;
+		return Promise.resolve( cave );
 
 		// .lox parsing functions
 
@@ -35528,7 +35448,7 @@
 
 		cave.addXsects( xSects );
 
-		return this;
+		return Promise.resolve( cave );
 
 		function readCoords( parts ) {
 
@@ -37770,6 +37690,9 @@
 	      };
 	    }
 	    point = source.inverse(point); // Convert Cartesian to longlat
+	    if (!point) {
+	      return;
+	    }
 	  }
 	  // Adjust for the prime meridian if necessary
 	  if (source.from_greenwich) {
@@ -40203,7 +40126,7 @@
 	      if (this.mode === this.N_POLE) {
 	        coslam = -coslam;
 	      }
-	      if (Math.abs(phi + this.phi0) < EPSLN) {
+	      if (Math.abs(phi + this.lat0) < EPSLN) {
 	        return null;
 	      }
 	      y = FORTPI - phi * 0.5;
@@ -40302,7 +40225,7 @@
 	      y = cosz * rh;
 	      break;
 	    case this.OBLIQ:
-	      phi = (Math.abs(rh) <= EPSLN) ? this.phi0 : Math.asin(cosz * this.sinph0 + y * sinz * this.cosph0 / rh);
+	      phi = (Math.abs(rh) <= EPSLN) ? this.lat0 : Math.asin(cosz * this.sinph0 + y * sinz * this.cosph0 / rh);
 	      x *= sinz * this.cosph0;
 	      y = (cosz - Math.sin(phi) * this.sinph0) * rh;
 	      break;
@@ -40323,8 +40246,8 @@
 	      y *= this.dd;
 	      rho = Math.sqrt(x * x + y * y);
 	      if (rho < EPSLN) {
-	        p.x = 0;
-	        p.y = this.phi0;
+	        p.x = this.long0;
+	        p.y = this.lat0;
 	        return p;
 	      }
 	      sCe = 2 * Math.asin(0.5 * rho / this.rq);
@@ -40347,8 +40270,8 @@
 	      }
 	      q = (x * x + y * y);
 	      if (!q) {
-	        p.x = 0;
-	        p.y = this.phi0;
+	        p.x = this.long0;
+	        p.y = this.lat0;
 	        return p;
 	      }
 	      ab = 1 - q / this.qp;
@@ -41616,7 +41539,7 @@
 	      //default case
 	      cos_c = this.sin_p12 * sinphi + this.cos_p12 * cosphi * Math.cos(dlon);
 	      c = Math.acos(cos_c);
-	      kp = c / Math.sin(c);
+	      kp = c ? c / Math.sin(c) : 1;
 	      p.x = this.x0 + this.a * kp * cosphi * Math.sin(dlon);
 	      p.y = this.y0 + this.a * kp * (this.cos_p12 * sinphi - this.sin_p12 * cosphi * Math.cos(dlon));
 	      return p;
@@ -41680,7 +41603,7 @@
 	function inverse$o(p) {
 	  p.x -= this.x0;
 	  p.y -= this.y0;
-	  var rh, z, sinz, cosz, lon, lat, con, e0, e1, e2, e3, Mlp, M, N1, psi, Az, cosAz, tmp, A, B, D, Ee, F;
+	  var rh, z, sinz, cosz, lon, lat, con, e0, e1, e2, e3, Mlp, M, N1, psi, Az, cosAz, tmp, A, B, D, Ee, F, sinpsi;
 	  if (this.sphere) {
 	    rh = Math.sqrt(p.x * p.x + p.y * p.y);
 	    if (rh > (2 * HALF_PI * this.a)) {
@@ -41764,7 +41687,8 @@
 	      F = 1 - A * Ee * Ee / 2 - D * Ee * Ee * Ee / 6;
 	      psi = Math.asin(this.sin_p12 * Math.cos(Ee) + this.cos_p12 * Math.sin(Ee) * cosAz);
 	      lon = adjust_lon(this.long0 + Math.asin(Math.sin(Az) * Math.sin(Ee) / Math.cos(psi)));
-	      lat = Math.atan((1 - this.es * F * this.sin_p12 / Math.sin(psi)) * Math.tan(psi) / (1 - this.es));
+	      sinpsi = Math.sin(psi);
+	      lat = Math.atan2((sinpsi - this.es * F * this.sin_p12) * Math.tan(psi), sinpsi * (1 - this.es));
 	      p.x = lon;
 	      p.y = lat;
 	      return p;
@@ -42487,7 +42411,10 @@
 
 			if ( matches && matches.length === 2 ) {
 
-				switch ( matches[ 1 ] ) {
+				const init = matches[ 1 ];
+				var code;
+
+				switch ( init ) {
 
 				case 'epsg:27700' :
 
@@ -42497,7 +42424,29 @@
 
 				default:
 
-					throw new Error( 'Unsupported projection' );
+					code = init.match( /epsg:([0-9]+)/ );
+
+					if ( code != null ) {
+
+						console.log( 'looking up CRS code EPSG:' + code [ 1 ] );
+
+						return fetch( 'https://epsg.io/' + code[ 1 ] + '.proj4' )
+							.then( response => {
+
+								return response.text();
+
+							} ).then(  text => {
+
+								this._setCRS( text );
+
+							} ).catch( function () { console.log( 'CRS lookup failed' ); } );
+
+					} else {
+
+						console.log( 'Unsupported projection:', sourceCRS );
+						sourceCRS = null;
+
+					}
 
 				}
 
@@ -42505,11 +42454,24 @@
 
 		}
 
-		const cfg = this.ctx.cfg;
+		this._setCRS( sourceCRS );
 
+		return Promise.resolve( null );
+
+	};
+
+	Handler.prototype._setCRS = function ( sourceCRS ) {
+
+		const cfg = this.ctx.cfg;
 		const displayCRS = cfg.value( 'displayCRS', 'EPSG:3857' );
 
-		if ( sourceCRS === null ) sourceCRS = cfg.value( 'defaultCRS', null );
+		if ( sourceCRS === null ) {
+
+			sourceCRS = cfg.value( 'defaultCRS', null );
+
+			if ( sourceCRS !== null ) console.log( 'Using default projection.' );
+
+		}
 
 		// FIXME use NAD grid corrections OSTM15 etc ( UK Centric )
 		if ( sourceCRS !== null ) {
@@ -42974,14 +42936,16 @@
 
 		if ( moreFiles ) this.loadFile( files.pop() );
 
-		handler.parse( this.models, data, metadata, section );
+		handler.parse( this.models, data, metadata, section ).then( models => {
 
-		if ( ! moreFiles ) {
+			if ( ! moreFiles ) {
 
-			this.callback( this.models );
-			this.dispatchEvent( { type: 'progress', name: 'end' } );
+				this.callback( models );
+				this.dispatchEvent( { type: 'progress', name: 'end' } );
 
-		}
+			}
+
+		} );
 
 	};
 
@@ -43486,12 +43450,11 @@
 		const geometry = new BufferGeometry();
 		const material = new PointsMaterial();
 
-		material.map = new TextureLoader().load( ctx.cfg.value( 'home', '' ) + 'images/disc.png' );
+		material.map = ctx.materials.textureCache.getTexture( 'disc' );
 		material.opacity = 1.0;
 		material.alphaTest = 0.8;
 		material.sizeAttenuation = false;
 		material.transparent = true;
-		material.sizeAttenuation = false;
 		material.size = 10;
 		material.vertexColors = true;
 
@@ -43647,36 +43610,7 @@
 
 	};
 
-	function ExtendedPointsMaterial ( ctx ) {
-
-		PointsMaterial.call( this );
-
-		const colourCache = ctx.materials.colourCache;
-
-		this.map = new TextureLoader().load( ctx.cfg.value( 'home', '' ) + 'images/disc.png' );
-		this.color = colourCache.white;
-		this.opacity = 1.0;
-		this.alphaTest = 0.8;
-
-		this.sizeAttenuation = false;
-		this.transparent = true; // to ensure points rendered over lines.
-		this.vertexColors = true;
-
-		this.onBeforeCompile = function ( shader ) {
-
-			var vertexShader = shader.vertexShader
-				.replace( '#include <common>', '\nattribute float pSize;\n\n$&' )
-				.replace( '\tgl_PointSize = size;', '\tgl_PointSize = pSize;' );
-
-			shader.vertexShader = vertexShader;
-
-		};
-
-		return this;
-
-	}
-
-	ExtendedPointsMaterial.prototype = Object.create( PointsMaterial.prototype );
+	const img = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='36px' height='36px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M20.94 11c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E";
 
 	function PointIndicator ( ctx, color ) {
 
@@ -43684,7 +43618,7 @@
 
 		if ( materials.pointerTexture === undefined ) {
 
-			materials.pointerTexture = new TextureLoader().load( ctx.cfg.value( 'home', '' ) + 'images/ic_location.png' );
+			materials.pointerTexture = new TextureLoader().load( img );
 
 		}
 
@@ -43709,7 +43643,7 @@
 
 	function Stations ( ctx, selection ) {
 
-		Points.call( this, new BufferGeometry, new ExtendedPointsMaterial( ctx ) );
+		Points.call( this, new BufferGeometry, ctx.materials.getExtendedPointsMaterial() );
 
 		this.type = 'CV.Stations';
 		this.map = new Map();
@@ -48275,7 +48209,7 @@
 
 	};
 
-	Survey.prototype.gltfExport = function ( selection, callback ) {
+	Survey.prototype.gltfExport = function ( selection, options, callback ) {
 
 		const items = [];
 
@@ -48312,11 +48246,23 @@
 
 		worker.addEventListener( 'message', function( event ) {
 
-			callback( new Blob( [ event.data.gltf ], { type: 'text/plain' } ) );
+			var mimeType;
+
+			if ( options.binary) {
+
+				mimeType = 'application/octet-stream';
+
+			} else {
+
+				mimeType = 'application/gltf+json';
+
+			}
+
+			callback( new Blob( [ event.data.gltf ], { type : mimeType } ), options.binary );
 
 		} );
 
-		worker.postMessage( items );
+		worker.postMessage( { items: items, options: options } );
 
 	};
 
@@ -48896,6 +48842,7 @@
 			self.accessToken = endpoint.accessToken;
 			self.attributions = endpoint.attributions;
 
+			EPSG4326TileSet.defaultTileSet.valid = true;
 			tileSetReady();
 
 		}
@@ -48903,6 +48850,7 @@
 		function _apiError ( ) {
 
 			console.warn( 'cesium api error' );
+			tileSetReady();
 
 		}
 
@@ -48910,6 +48858,7 @@
 
 	EPSG4326TileSet.defaultTileSet = {
 		title: 'Cesium',
+		initialZoom: 12,
 		overlayMaxZoom: 16,
 		maxZoom: 16,
 		minZoom: 10,
@@ -48917,11 +48866,12 @@
 		subdirectory: null,
 		dtmScale: 64,
 		minX: 0,
-		maxX: 1023,
+		maxX: 2048,
 		minY: 0,
 		maxY: 1023,
 		attributions: [],
-		log: true
+		log: true,
+		valid: false
 	};
 
 	EPSG4326TileSet.prototype.workerScript = 'webMeshWorker.js';
@@ -49286,6 +49236,11 @@
 
 				self.tileArea( self.limits );
 
+			} else {
+
+				console.log( 'no terrain found' );
+				onLoaded( self );
+
 			}
 
 		}
@@ -49308,6 +49263,8 @@
 		for ( var i = 0, l = tileSets.length; i < l; i++ ) {
 
 			const tileSet = tileSets[ i ];
+
+			if ( tileSet.valid === false ) continue;
 
 			const coverage = TS.getCoverage( limits, tileSet.minZoom );
 
@@ -49342,7 +49299,7 @@
 
 		const tileSet = this.TS.tileSet;
 
-		var zoom = tileSet.overlayMaxZoom + 1;
+		var zoom = tileSet.initialZoom || tileSet.overlayMaxZoom + 1;
 		var coverage;
 
 		do {
@@ -49429,6 +49386,7 @@
 			}
 
 			tile.createFromBufferAttributes( tileData.index, tileData.attributes, tileData.boundingBox, self.material );
+			tile.canZoom = tileData.canZoom;
 
 			self.dispatchEvent( { type: 'progress', name: 'set', progress: 100 * ( self.maxTilesLoading - self.tilesLoading ) / self.maxTilesLoading } );
 
@@ -50413,6 +50371,7 @@
 	});
 
 	const settings = {
+	  title: "Settings",
 	  survey: {
 	    header: "Survey",
 	    caption: "File"
@@ -50477,9 +50436,21 @@
 	    svx_control_mode: "'Aven' controls",
 	    zoom_to_cursor: "Zoom to cursor",
 	    wheel_tilt: "Mouse wheel - tilt"
+	  },
+	  ui: {
+	    selection_tree: "Use tree selection"
+	  },
+	  gltf_export: {
+	    header: "glTF Export",
+	    walls: "include LRUD walls",
+	    scraps: "include scraps",
+	    legs: "include centre lines",
+	    rotate_axes: "rotate axes",
+	    "export": "Download"
 	  }
 	};
 	const surface = {
+	  title: "Surface",
 	  surface: {
 	    header: "Surface Features",
 	    legs: "Surface Legs",
@@ -50501,12 +50472,6 @@
 	      overlay: "map overlay",
 	      contours: "contours"
 	    },
-	    through: {
-	      caption: "Through",
-	      basic: "basic",
-	      stencil: "stencil",
-	      blend: "blend"
-	    },
 	    overlay: {
 	      caption: "Overlay"
 	    },
@@ -50516,21 +50481,21 @@
 	    downloadTileSet: "download tile set spec"
 	  }
 	};
+	const selection = {
+	  title: "Selection",
+	  header: "Selection"
+	};
 	const edit = {
-	  header: "Edit",
+	  title: "Edit",
 	  mode: "edit mode",
 	  modes: {
 	    none: "- none -",
 	    route: "Routes",
 	    trace: "Traces",
-	    entrances: "Entrances",
-	    annotate: "Annotations"
+	    entrances: "Entrances"
 	  },
 	  entrance: {
 	    header: "Entrances"
-	  },
-	  annotate: {
-	    header: "Annotations"
 	  },
 	  route: {
 	    header: "Routes",
@@ -50545,6 +50510,7 @@
 	  }
 	};
 	const info = {
+	  title: "Information",
 	  header: "Information",
 	  stats: {
 	    header: "Survey Stats",
@@ -50552,18 +50518,12 @@
 	    totalLength: "Total length",
 	    minLength: "Shortest leg",
 	    maxLength: "Longest leg"
-	  },
-	  gltf_export: {
-	    header: "GLTF Export",
-	    walls: "include LRUD walls",
-	    scraps: "include scraps",
-	    legs: "include centre lines",
-	    "export": "Download"
 	  }
 	};
 	const help = {
-	  header_svx: "Help - key commands (survex)",
-	  header_native: "Help - key commands (native)",
+	  title: "Help",
+	  header_svx: "Key commands (survex)",
+	  header_native: "Key commands (native)",
 	  shading: {
 	    header: "Shading",
 	    height: "height",
@@ -50635,6 +50595,7 @@
 	var lang_en = {
 	  settings: settings,
 	  surface: surface,
+	  selection: selection,
 	  edit: edit,
 	  info: info,
 	  help: help,
@@ -50750,13 +50711,23 @@
 
 		}
 
+		if ( Cfg.home !== undefined ) this.environment.set( 'home', Cfg.home );
+
 		this.setLanguage( this.value( 'language', navigator.language.slice( 0, 2 ) ) );
+
+	}
+
+	if ( document.currentScript !== undefined ) {
+
+		Cfg.home = document.currentScript.src.match( /^(.*\/)js\// )[ 1 ];
 
 	}
 
 	Cfg.prototype = Object.create( EventDispatcher.prototype );
 
 	Cfg.prototype.setLanguage = function ( lang ) {
+
+		console.log( 'home:', Cfg.home );
 
 		if ( lang === 'en' ) {
 
@@ -50767,13 +50738,16 @@
 			// attempt to register non-default language
 
 			console.log( 'loading language file for:', lang );
+
 			const loader = new FileLoader().setPath( this.value( 'home' ) + 'lib/' );
 
 			loader.load( 'lang-' + lang + '.json', _languageLoaded, null, _languageError );
 
 		}
 
-		x18n_build.on( [ 'lang:change' ], function () { this.dispatchEvent( { type: 'change', name: 'language' } ); } );
+		const self = this;
+
+		x18n_build.on( [ 'lang:change' ], function () { self.dispatchEvent( { type: 'change', name: 'language' } ); } );
 
 		return;
 
@@ -50805,6 +50779,25 @@
 			return defaultValue;
 
 		}
+
+	};
+
+	Cfg.prototype.setPropertyValue = function ( item, defaultValue ) {
+
+		// set to defined value or default
+		this.environment.set ( item, this.value( item, defaultValue ) );
+
+		Object.defineProperty( this, item, {
+
+			set: function ( value ) {
+
+				this.environment.set ( item, value );
+				this.dispatchEvent( { type: 'change', name: item } );
+
+			},
+			get: function () {
+				return this.environment.get( item ); }
+		} );
 
 	};
 
@@ -52632,6 +52625,9 @@
 
 		if ( ! container ) alert( 'No container DOM object [' + domID + '] available' );
 
+		// target with css for fullscreen on small screen devices
+		container.classList.add( 'cv-container' );
+
 		const width = container.clientWidth;
 		const height = container.clientHeight;
 
@@ -52685,6 +52681,7 @@
 		var cameraManager = new CameraManager( ctx, renderer, scene );
 
 		const raycaster = new Raycaster();
+		raycaster.layers.enableAll();
 
 		// setup lighting
 		const lightingManager = new LightingManager( ctx, scene );
@@ -52992,7 +52989,6 @@
 		_enableLayer( LEG_SURFACE,       'surfaceLegs' );
 		_enableLayer( LABEL_STATION,     'stationLabels' );
 		_enableLayer( LABEL_STATION_COMMENT, 'stationComments' );
-		_enableLayer( FEATURE_ANNOTATIONS, 'annotations' );
 		_enableLayer( SURVEY_WARNINGS,     'warnings' );
 
 		container.addEventListener( 'mouseover', onMouseOver );
@@ -53000,6 +52996,7 @@
 
 		container.addEventListener( 'fullscreenchange', onFullscreenChange );
 		container.addEventListener( 'msfullscreenchange', onFullscreenChange );
+		container.addEventListener( 'webkitfullscreenchange', onFullscreenChange );
 
 		this.addEventListener( 'change', viewChanged );
 
@@ -53113,12 +53110,6 @@
 
 				break;
 
-			case MOUSE_MODE_ANNOTATE:
-
-				mouseTargets = survey.pointTargets;
-
-				break;
-
 			default:
 
 				console.warn( 'invalid mouse mode', x );
@@ -53138,7 +53129,7 @@
 
 		function onFullscreenChange () {
 
-			if ( document.fullscreenElement || document.msfullscreenElement ) {
+			if ( document.fullscreenElement || document.msFullscreenElement || document.webkitFullscreenElement ) {
 
 				container.classList.add( 'toggle-fullscreen' );
 
@@ -53169,6 +53160,10 @@
 
 					container.msRequestFullscreen();
 
+				} else if ( document.webkitFullscreenElement === null) {
+
+					container.webkitRequestFullscreen();
+
 				}
 
 			} else {
@@ -53179,9 +53174,21 @@
 
 					document.exitFullscreen();
 
-				} else if ( document.msfullscreenElement ) {
+				} else if ( document.msFullscreenElement ) {
 
 					document.msExitFullscreen();
+
+				} else if ( document.webkitFullscreenElement ) {
+
+					if ( document.webkitExitFullscreen ) {
+
+						document.webkitExitFullscreen();
+
+					} else if ( document.webkitCancelFullScreen ) {
+
+						document.webkitCancelFullScreen();
+
+					}
 
 				}
 
@@ -53847,11 +53854,12 @@
 
 		function onMouseDown ( event ) {
 
+			if ( event.target !== renderer.domElement ) return;
+
 			const scale = __v.set( container.clientWidth / 2, container.clientHeight / 2, 0 );
 			const mouse = cameraManager.getMouse( event.clientX, event.clientY );
 
 			raycaster.setFromCamera( mouse, cameraManager.activeCamera );
-
 			const intersects = raycaster.intersectObjects( mouseTargets, false );
 
 			var entrance;
@@ -53915,10 +53923,8 @@
 
 				break;
 
-			case MOUSE_MODE_ANNOTATE:
-
-				selectAnnotation( visibleStation( intersects ) );
 			*/
+
 			}
 
 			function _selectStation ( station ) {
@@ -53926,6 +53932,12 @@
 				if ( station === null ) return;
 
 				survey.selectStation( station );
+
+				const selectEvent = { type: 'select', node: station, handled: false };
+
+				self.dispatchEvent( selectEvent );
+
+				if ( selectEvent.handled ) return;
 
 				if ( event.button === MOUSE.LEFT ) {
 
@@ -53936,6 +53948,7 @@
 					_setStationPOI( station );
 
 				}
+
 
 			}
 
@@ -53984,6 +53997,8 @@
 				closePopup();
 				renderView();
 
+				self.dispatchEvent( { type: 'select', node: null } );
+
 			}
 
 			function _showStationPopup ( station ) {
@@ -54018,33 +54033,13 @@
 
 				renderView();
 
+				self.dispatchEvent( { type: 'select', node: null } );
+
 			}
 
 		}
+
 		/*
-		function selectAnnotation ( station ) {
-
-			const annotations = survey.annotations;
-
-			if ( station === null ) return;
-
-			survey.selectStation( station );
-
-			self.dispatchEvent( {
-				type: 'selectedAnnotation',
-				annotationInfo: annotations.getStation( station ),
-				add: function _setAnnotation( annotation ) {
-
-					console.log( 'annotation handler: ', annotation );
-					annotations.setStation( station, annotation );
-					renderView();
-
-				}
-			} );
-
-			renderView();
-
-		}
 
 		function selectEntrance ( hit ) {
 
@@ -54057,7 +54052,9 @@
 			} );
 
 		}
+
 		*/
+
 		function selectTrace ( hit ) {
 
 			const dyeTraces = survey.dyeTraces;
@@ -54215,9 +54212,9 @@
 
 		};
 
-		this.getGLTFExport = function ( selection, callback ) {
+		this.getGLTFExport = function ( selection, options, callback ) {
 
-			survey.gltfExport( selection, callback );
+			survey.gltfExport( selection, options, callback );
 
 		};
 
@@ -54266,6 +54263,7 @@
 	function Frame ( ctx ) {
 
 		this.ctx = ctx;
+		this.openPageId = null;
 		this.reset();
 
 	}
@@ -54277,11 +54275,17 @@
 		const frame = document.createElement( 'div' );
 		frame.classList.add( 'cv-frame' );
 
+		const frameHeader = document.createElement( 'div' );
+		frameHeader.classList.add( 'cv-frame-header' );
+		frameHeader.textContent = 'frame header';
+		frame.appendChild( frameHeader );
+
 		// create UI box to contain tabs - reorients for small screen widths
 		const tabBox = document.createElement( 'div' );
 		tabBox.classList.add( 'cv-tab-box' );
 
 		this.frame = frame;
+		this.header = frameHeader;
 		this.tabBox = tabBox;
 		this.pages = [];
 		this.listeners = [];
@@ -54299,6 +54303,7 @@
 
 		function _closeFrame ( /* event */ ) {
 
+			self.openPageId = null;
 			self.tabBox.classList.remove( 'onscreen' );
 			self.frame.classList.remove( 'onscreen' );
 
@@ -54329,6 +54334,8 @@
 
 		this.pages.push( { tab: tab, page: pageDiv, owner: page } );
 
+		if ( this.openPageId === page.id ) page.open();
+
 		return this;
 
 	};
@@ -54340,10 +54347,11 @@
 	};
 
 
-	Frame.prototype.onScreen = function () {
+	Frame.prototype.onScreen = function ( title ) {
 
 		this.tabBox.classList.add( 'onscreen' );
 		this.frame.classList.add( 'onscreen' );
+		this.header.textContent = title;
 
 	};
 
@@ -54509,6 +54517,7 @@
 		this.slide = undefined;
 		this.x18nPrefix = x18nPrefix + '.';
 		this.onChange = null;
+		this.id = id;
 
 	}
 
@@ -54532,12 +54541,22 @@
 
 	Page.prototype.tabHandleClick = function ( event ) {
 
-		const tab = event.target;
+		event.preventDefault();
+		event.stopPropagation();
+
+		this.open();
+
+	};
+
+	Page.prototype.open = function () {
+
+		const tab = this.tab;
 		const pages = this.frame.pages;
 
 		tab.classList.add( 'toptab' );
 
-		this.frame.onScreen();
+		this.frame.onScreen( this.i18n( 'title' ) );
+		this.frame.openPageId = this.id;
 
 		pages.forEach( function ( page ) {
 
@@ -54585,6 +54604,66 @@
 		this.page.appendChild( div );
 
 		return div;
+
+	};
+
+	Page.prototype.addCollapsingHeader = function ( text ) {
+
+		const div = document.createElement( 'div' );
+
+		div.classList.add( 'header' );
+		div.textContent = this.i18n( text );
+		div.classList.add( 'header_full' );
+
+		this.page.appendChild( div );
+
+		const container = document.createElement( 'div' );
+
+		container.classList.add( 'container_full' );
+
+		this.page.appendChild( container );
+
+		div.addEventListener( 'click', function () {
+
+			var redraw; // eslint-disable-line no-unused-vars
+
+			if ( div.classList.contains( 'header_collapsed' ) ) {
+
+				container.style.display = 'block';
+
+				container.addEventListener( 'transitionend', _onReveal );
+
+				redraw = container.clientHeight; // lgtm
+				container.classList.remove( 'container_collapsed' );
+
+			} else {
+
+				container.addEventListener( 'transitionend', _onCollapse );
+
+				container.classList.add( 'container_collapsed' );
+
+			}
+
+			function _onReveal () {
+
+				container.removeEventListener( 'transitionend', _onReveal );
+
+				div.classList.remove( 'header_collapsed' );
+
+			}
+
+			function _onCollapse () {
+
+				container.removeEventListener( 'transitionend', _onCollapse );
+
+				div.classList.add( 'header_collapsed' );
+				container.style.display = 'none';
+
+			}
+
+		} );
+
+		return container;
 
 	};
 
@@ -54704,9 +54783,6 @@
 		label.classList.add( 'cv-file-label' );
 
 		const input = document.createElement( 'input' );
-		const img = document.createElement( 'img' );
-
-		img.src = frame.ctx.cfg.value( 'home' ) + 'images/open.png';
 
 		input.id = id;
 		input.classList.add( 'cv-file' );
@@ -54729,7 +54805,6 @@
 
 		} );
 
-		label.appendChild( img );
 		label.appendChild( input );
 
 		return div;
@@ -55190,38 +55265,6 @@
 		this.addLine( this.i18n( 'stats.minLength' ) + ': ' + stats.minLegLength.toFixed( 2 ) + '\u202fm' );
 		this.addLine( this.i18n( 'stats.maxLength' ) + ': ' + stats.maxLegLength.toFixed( 2 ) + '\u202fm' );
 
-		if ( this.canDownload() ) {
-
-			this.addHeader( 'gltf_export.header' );
-
-			const selection = {};
-
-			if ( viewer.hasWalls ) {
-
-				selection.walls = true;
-				this.addCheckbox( 'gltf_export.walls', selection, 'walls' );
-
-			}
-
-			if ( viewer.hasScraps ) {
-
-				selection.scraps = true;
-				this.addCheckbox( 'gltf_export.scraps', selection, 'scraps' );
-
-			}
-
-			selection.legs = false;
-
-			this.addCheckbox( 'gltf_export.legs', selection, 'legs' );
-
-			this.addButton( 'gltf_export.export', function () {
-
-				viewer.getGLTFExport( selection, handleExport );
-
-			} );
-
-		}
-
 		this.addHeader( 'CaveView v' + VERSION + '.' );
 
 		this.addLogo();
@@ -55231,120 +55274,129 @@
 		this.addLink( 'https://aardgoose.github.io/CaveView.js/', 'CaveView on GitHub' );
 		this.addText( '© Angus Sawyer, 2020' );
 
-		const self = this;
-
-		function handleExport ( gltfData ) {
-
-			const filename = replaceExtension( fileSelector.selectedFile, 'gltf');
-			self.download(  URL.createObjectURL( gltfData ), filename );
-
-		}
-
 	}
 
 	InfoPage.prototype = Object.create( Page.prototype );
 
-	function SelectionPage ( frame, viewer, container, fileSelector ) {
+	function SelectionCommonPage ( frame, viewer, container, fileSelector ) {
 
-		Page.call( this, 'icon_explore', 'explore' );
+		Page.call( this, 'icon_explore', 'selection', _onTop, _onLeave );
 
 		frame.addPage( this );
 
+		this.surveyTree = viewer.getSurveyTree();
+		this.currentTop = this.surveyTree;
+
+		this.nodes = new WeakMap();
+		this.leafSections = new WeakSet();
+		this.lastSelected = null;
+		this.lastSection = 0;
+		this.lastShadingMode = viewer.shadingMode;
+		this.currentHover = null;
+		this.stringCompare = new Intl.Collator( 'en-GB', { numeric: true } ).compare;
+		this.isOntop = false;
+
 		const titleBar = document.createElement( 'div' );
-		const surveyTree = viewer.getSurveyTree();
-		const self = this;
-
-		var nodes = null;
-		var depth = 0;
-		var currentHover = 0;
-		var currentTop;
-		var lastSelected = null;
-		var lastShadingMode = viewer.shadingMode;
-
-		const stringCompare = new Intl.Collator( 'en-GB', { numeric: true } ).compare;
-
-		currentTop = surveyTree;
-
-		this.addHeader( 'Selection' );
+		const cfg = viewer.ctx.cfg;
 
 		titleBar.id = 'ui-path';
 		titleBar.classList.add( 'header' );
 
 		if ( viewer.isClipped ) {
 
-			titleBar.classList.add( 'reload' );
 			this.addListener( titleBar, 'click', __handleLoadFull );
+			titleBar.classList.add( 'reload' );
+			titleBar.textContent = this.currentTop.name;
+
+		} else {
+
+			titleBar.textContent = this.currentTop.name;
+
+			this.nodes.set( titleBar, this.currentTop );
 
 		}
 
+		this.titleBar = titleBar;
 		this.appendChild( titleBar );
-
-		this.addSlide( _displayPanel( currentTop ), depth );
-
-		this.addListener( this.page, 'dblclick', _handleSelectSurveyDblClick );
-		this.addListener( this.page, 'click', _handleSelectSurveyClick );
 
 		this.addListener( this.page, 'mouseover', _handleMouseover );
 		this.addListener( this.page, 'mouseleave', _handleMouseleave );
 
-		var redraw = container.clientHeight; // eslint-disable-line no-unused-vars
+		this.addListener( this.page, 'click', _handleSelectSurveyClick );
+		this.addListener( this.page, 'dblclick', _handleSelectSurveyDblClick );
 
-		this.onChange = _onChange;
+		const self = this;
+		var redraw = container.clientHeight; /* lgtm[js/unused-local-variable] */ // eslint-disable-line no-unused-vars
 
-		return this;
+		this.addLine = function ( ul, child ) {
 
-		function _onChange( event ) {
+			const connections = ( child.p === undefined ) ? null : child.p.connections;
 
-			if ( ! viewer.surveyLoaded ) return;
+			// track which sections have stations as children
 
-			if (
-				( event.name === 'splays' ) ||
-				( lastShadingMode === SHADING_SURVEY && viewer.shadingMode !== SHADING_SURVEY ) ||
-				( lastShadingMode !== SHADING_SURVEY && viewer.shadingMode === SHADING_SURVEY )
-			) {
+			if ( connections !== null && !this.leafSections.has( ul) ) this.leafSections.add( ul );
 
-				self.replaceSlide( _displayPanel( currentTop ), depth );
+			// omit splays if now displaying
 
-			}
+			if ( connections === 0 && ! viewer.splays && child.type !== STATION_ENTRANCE ) return;
 
-		}
+			const li  = document.createElement( 'li' );
+			const text = ( child.comment === undefined ) ? child.name : child.name + ' ( ' + child.comment + ' )';
+			const txt = document.createTextNode( text );
 
-		function _displayPanel ( top ) {
+			var key;
 
-			const surveyColourMapper = viewer.ctx.surveyColourMapper;
-			const surveyColourMap = ( viewer.shadingMode === SHADING_SURVEY ) ? surveyColourMapper.getColourMap( viewer.section ) : null;
-			const cfg = viewer.ctx.cfg;
+			self.nodes.set( li, child );
 
-			nodes = new WeakMap();
+			if ( viewer.section === child ) li.classList.add( 'selected' );
 
-			var tmp;
+			if ( connections === null ) {
 
-			lastShadingMode = viewer.shadingMode;
+				key = _makeKey( '\u2588 ', '#444444' );
 
-			while ( tmp = titleBar.firstChild ) titleBar.removeChild( tmp ); // eslint-disable-line no-cond-assign
+				li.classList.add( 'section' );
 
-			if ( top === surveyTree ) {
+			} else if ( child.type !== undefined && child.type === STATION_ENTRANCE ) {
 
-				titleBar.textContent = ( top.name === '' ) ? '[model]' : top.name;
-				nodes.set( titleBar, top );
+				key = _makeKey( '\u2229 ', cfg.themeColorCSS( 'stations.entrances.marker' ) );
 
-			} else {
+			} else if ( connections > 2 ) { // station at junction
 
-				const span = document.createElement( 'span' );
+				key = _makeKey( '\u25fc ', cfg.themeColorCSS( 'stations.junctions.marker' ) );
 
-				span.id ='surveyBack';
-				span.textContent = ' \u25C4';
+			} else if ( connections === 0 ) { // end of splay
 
-				nodes.set( span, top );
+				key = _makeKey( '\u25fb ', cfg.themeColorCSS( 'stations.default.marker' ) );
 
-				titleBar.appendChild( span );
-				titleBar.appendChild( document.createTextNode( ' ' + top.name ) );
+			} else { // normal station in middle or end of leg
+
+				key = _makeKey( '\u25fc ', cfg.themeColorCSS( 'stations.default.marker' ) );
 
 			}
 
-			const ul = document.createElement( 'ul' );
+			li.appendChild( key );
+			li.appendChild( txt );
+
+			if ( child.children.length > 0 ) {
+
+				const descend = document.createElement( 'div' );
+
+				descend.classList.add( 'descend-tree' );
+
+				self.nodes.set( descend, child );
+
+				li.appendChild( descend );
+
+			}
+
+			ul.appendChild( li );
+
+		};
+
+		this.displaySectionCommon = function ( top ) {
 
 			const children = top.children;
+			const self = this;
 
 			if ( ! top.sorted ) {
 
@@ -55353,94 +55405,56 @@
 
 			}
 
-			top.forEachChild( _addLine );
+			const ul = document.createElement( 'ul' );
+			ul.classList.add( 'cv-tree' );
 
-			currentTop = top;
-			lastSelected = null;
+			top.forEachChild( function ( child ) { self.addLine( ul, child ); } );
+
+			_colourSections( ul );
+
+			this.currentTop = top;
+			// this.lastSelected = null;
+			this.lastShadingMode = viewer.shadingMode;
 
 			return ul;
 
-			function _addLine ( child ) {
-
-				const connections = ( child.p === undefined ) ? null : child.p.connections;
-
-				if ( connections === 0 && ! viewer.splays && child.type !== STATION_ENTRANCE ) return; // skip spays if not displayed
-
-				const li  = document.createElement( 'li' );
-				const text = ( child.comment === undefined ) ? child.name : child.name + ' ( ' + child.comment + ' )';
-				const txt = document.createTextNode( text );
-
-				var key;
-
-				nodes.set( li, child );
-
-				if ( viewer.section === child ) li.classList.add( 'selected' );
-
-				if ( connections === null ) {
-
-					const id = child.id;
-
-					let colour;
-
-					if ( surveyColourMap !== null && surveyColourMap[ id ] !== undefined ) {
-
-						colour = surveyColourMap[ id ].getHexString();
-
-					} else {
-
-						colour = '444444';
-
-					}
-
-					key = _makeKey( '\u2588 ', '#' + colour );
-
-					li.classList.add( 'section' );
-
-				} else if ( child.type !== undefined && child.type === STATION_ENTRANCE ) {
-
-					key = _makeKey( '\u2229 ', cfg.themeColorCSS( 'stations.entrances.marker' ) );
-
-				} else if ( connections > 2 ) { // station at junction
-
-					key = _makeKey( '\u25fc ', cfg.themeColorCSS( 'stations.junctions.marker' ) );
-
-				} else if ( connections === 0 ) { // end of splay
-
-					key = _makeKey( '\u25fb ', cfg.themeColorCSS( 'stations.default.marker' ) );
-
-				} else { // normal station in middle or end of leg
-
-					key = _makeKey( '\u25fc ', cfg.themeColorCSS( 'stations.default.marker' ) );
-
-				}
-
-				li.appendChild( key );
-				li.appendChild( txt );
-
-				if ( child.children.length > 0 ) {
-
-					const descend = document.createElement( 'div' );
-
-					descend.classList.add( 'descend-tree' );
-					descend.textContent = '\u25bA';
-
-					nodes.set( descend, child );
-
-					li.appendChild( descend );
-
-				}
-
-				ul.appendChild( li );
-
-			}
-
 			function _sortSurveys ( s1, s2 ) {
 
-				return stringCompare( s1.name, s2.name );
+				return self.stringCompare( s1.name, s2.name );
 
 			}
 
-		}
+		};
+
+		this.reloadSections = function () {
+
+			const uls = this.page.getElementsByTagName( 'UL' );
+			const targetSections = [];
+			const self = this;
+			var i;
+
+			// find leaf sections that need reloading
+
+			for ( i = 0; i < uls.length; i++ ) {
+
+				const ul = uls[ i ];
+				if ( this.leafSections.has( ul ) ) targetSections.push( ul );
+
+			}
+
+			targetSections.forEach( function ( ul ) {
+
+				const node = self.nodes.get( ul.previousSibling ) || self.currentTop;
+
+				if ( node ) ul.replaceWith( self.displaySectionCommon( node ) );
+
+			});
+
+		};
+
+		this.onChange = _onChange;
+
+		return;
 
 		function _makeKey ( text, color ) {
 
@@ -55455,8 +55469,8 @@
 
 		function _handleMouseleave ( /* event */ ) {
 
-			viewer.highlight = surveyTree;
-			viewer.popup = surveyTree;
+			viewer.highlight = self.surveyTree;
+			viewer.popup = self.surveyTree;
 
 		}
 
@@ -55466,14 +55480,14 @@
 
 			if ( target.nodeName !== 'LI' ) return;
 
-			const node = nodes.get( target );
+			const node = self.nodes.get( target );
 
-			if ( node !== currentHover ) {
+			if ( node !== self.currentHover ) {
 
-				viewer.highlight = ( viewer.section !== node ) ? node : surveyTree;
+				viewer.highlight = ( viewer.section !== node ) ? node : self.surveyTree;
 				viewer.popup = node;
 
-				currentHover = node;
+				self.currentHover = node;
 
 			}
 
@@ -55481,8 +55495,11 @@
 
 		function _handleSelectSurveyClick ( event ) {
 
+			event.stopPropagation();
+			event.preventDefault();
+
 			const target = event.target;
-			const node = nodes.get( target );
+			const node = self.nodes.get( target );
 
 			switch ( target.tagName ) {
 
@@ -55493,35 +55510,21 @@
 
 				target.classList.add( 'selected' );
 
-				if ( lastSelected !== null ) lastSelected.classList.remove( 'selected' );
+				if ( self.lastSelected !== null ) self.lastSelected.classList.remove( 'selected' );
 
-				lastSelected = target;
+				self.lastSelected = target;
 
 				break;
 
 			case 'DIV':
 
-				if ( node !== undefined && node !== surveyTree ) {
-
-					self.replaceSlide( _displayPanel( node ), ++depth );
-
-				} else if ( target.id === 'ui-path' ) {
-
-					viewer.section = currentTop;
-
-				}
-
+				self.handleNext( target, node );
 				break;
 
 			case 'SPAN':
 
-				if ( target.id === 'surveyBack' ) {
-
-					if ( currentTop === surveyTree ) return;
-
-					self.replaceSlide( _displayPanel( currentTop.parent ), --depth );
-
-				}
+				self.handleBack( target );
+				break;
 
 			}
 
@@ -55529,12 +55532,79 @@
 
 		function _handleSelectSurveyDblClick ( event ) {
 
+			event.stopPropagation();
+			event.preventDefault();
+
 			const target = event.target;
-			const node = nodes.get( target );
+			const node = self.nodes.get( target );
 
 			if ( ! target.classList.contains( 'section' ) ) return;
 
-			if ( node !== surveyTree ) viewer.cut = true;
+			if ( node !== self.surveyTree ) viewer.cut = true;
+
+		}
+
+		function _onChange( event ) {
+
+			if ( ! viewer.surveyLoaded ) return;
+
+			if ( event.name === 'splays' ) {
+
+				self.reloadSections();
+				return;
+			}
+
+			if (
+				( self.lastSection !== viewer.section ) ||
+				( self.lastShadingMode === SHADING_SURVEY && viewer.shadingMode !== SHADING_SURVEY ) ||
+				( self.lastShadingMode !== SHADING_SURVEY && viewer.shadingMode === SHADING_SURVEY )
+			) {
+
+				_colourSections();
+
+				self.lastShadingMode = viewer.shadingMode;
+				self.lastSection = viewer.section;
+
+			}
+
+		}
+
+		function _colourSections( ul ) {
+
+			const root = ( ul === undefined ) ? self.page : ul;
+			const lis = root.getElementsByTagName( 'li' );
+
+			var i;
+
+			const surveyColourMapper = viewer.ctx.surveyColourMapper;
+			const surveyColourMap = ( viewer.shadingMode === SHADING_SURVEY ) ? surveyColourMapper.getColourMap( viewer.section ) : null;
+
+			for ( i = 0; i < lis.length; i++ ) {
+
+				const li = lis[ i ];
+				const node = self.nodes.get( lis[ i ] );
+
+				if ( node !== undefined && node.p === undefined ) {
+
+					const span = li.firstChild;
+					const id = node.id;
+					let colour;
+
+					if ( surveyColourMap !== null && surveyColourMap[ id ] !== undefined ) {
+
+						colour = '#' + surveyColourMap[ id ].getHexString();
+
+					} else {
+
+						colour = '#444444';
+
+					}
+
+					span.style.color = colour;
+
+				}
+
+			}
 
 		}
 
@@ -55544,9 +55614,267 @@
 
 		}
 
+		function _onTop( ) {
+
+			self.isOntop = true;
+
+		}
+
+		function _onLeave( ) {
+
+			self.isOntop = false;
+
+		}
+
 	}
 
-	SelectionPage.prototype = Object.create( Page.prototype );
+	SelectionCommonPage.prototype = Object.create( Page.prototype );
+
+	function SelectionPage ( frame, viewer, container, fileSelector ) {
+
+		SelectionCommonPage.call( this, frame, viewer, container, fileSelector );
+
+		const self = this;
+		var depth = 0;
+
+		this.addSlide( _displaySection( self.currentTop ), depth );
+
+		var redraw = container.clientHeight; /* lgtm[js/unused-local-variable] */ // eslint-disable-line no-unused-vars
+
+		this.handleNext = function ( target, node ) {
+
+			if ( node !== undefined && node !== self.surveyTree ) {
+
+				self.replaceSlide( _displaySection( node ), ++depth );
+
+			} else if ( target.id === 'ui-path' ) {
+
+				viewer.section = self.currentTop;
+
+			}
+
+		};
+
+		this.handleBack = function ( target ) {
+
+			if ( target.id === 'surveyBack' ) {
+
+				if ( self.currentTop === self.surveyTree ) return;
+
+				self.replaceSlide( _displaySection( self.currentTop.parent ), --depth );
+
+			}
+
+		};
+
+		return this;
+
+		function _displaySection ( top ) {
+
+			self.nodes = new WeakMap();
+
+			var tmp;
+
+			while ( tmp = self.titleBar.firstChild ) self.titleBar.removeChild( tmp ); // eslint-disable-line no-cond-assign
+
+			if ( top === self.surveyTree ) {
+
+				self.titleBar.textContent = ( top.name === '' ) ? '[model]' : top.name;
+				self.nodes.set( self.titleBar, top );
+
+			} else {
+
+				const span = document.createElement( 'span' );
+
+				span.id ='surveyBack';
+				span.textContent = ' \u25C4';
+
+				self.nodes.set( span, top );
+
+				self.titleBar.appendChild( span );
+				self.titleBar.appendChild( document.createTextNode( ' ' + top.name ) );
+
+			}
+
+			return self.displaySectionCommon( top );
+
+		}
+
+	}
+
+	SelectionPage.prototype = Object.create( SelectionCommonPage.prototype );
+
+	function SelectionTreePage ( frame, viewer, container, fileSelector ) {
+
+		SelectionCommonPage.call( this, frame, viewer, container, fileSelector );
+
+		const self = this;
+		const domTop = self.displaySectionCommon( this.currentTop );
+
+		var hightlitElement = null;
+		var lastHighlitScroll = 0;
+
+		this.appendChild( domTop );
+
+		var redraw = container.clientHeight; /* lgtm[js/unused-local-variable] */ // eslint-disable-line no-unused-vars
+
+		this.handleNext = function ( target, node ) {
+
+			if ( node !== undefined && node !== self.surveyTree ) {
+
+				const li = target.parentNode;
+
+				if ( target.classList.contains( 'open' ) ) {
+
+					li.removeChild( li.lastElementChild );
+					target.classList.remove( 'open' );
+
+				} else {
+
+					const ul = self.displaySectionCommon( node );
+					li.appendChild( ul );
+					target.classList.add( 'open' );
+
+					return ul;
+
+				}
+
+			} else if ( target.id === 'ui-path' ) {
+
+				viewer.section = self.currentTop;
+
+			}
+
+		};
+
+		this.handleBack = function () {};
+
+		viewer.addEventListener( 'select', _selectNode );
+
+		return this;
+
+		function _selectNode ( event ) {
+
+			if ( ! self.isOntop) return;
+
+			// traverse DOM to find existing tree elements and add required
+			// until selected node is visible and can be highlighted
+
+			const selectedNode = event.node;
+
+			if ( selectedNode === null  ) {
+
+				_clearHighlitElement();
+				return;
+
+			}
+
+			// get list of tree nodes from selectedNode to root - 1
+
+			const path = [];
+			var node = selectedNode;
+
+			do {
+				path.push( node );
+				node = node.parent;
+			} while ( node.id !== 0 );
+
+			// search dom tree for list Element <LI> mapped to selected node
+
+			var topElement = domTop; // start from top of dom tree
+			var children = topElement.childNodes;
+
+			node = path.pop();
+
+			while ( node !== undefined ) {
+
+				let i = 0;
+				let listElement;
+
+				// find matching child
+				for ( i = 0; i < children.length; i++ ) {
+
+					listElement = children[ i ];
+					if ( self.nodes.get( listElement ) == node ) break;
+
+				}
+
+				if ( i == children.length ) break;
+
+				if ( node === selectedNode ) {
+
+					_setHighlight( listElement );
+					break;
+
+				} else {
+
+					let nextTopElement = listElement.lastElementChild;
+
+					// expand tree if not already visible
+					if ( nextTopElement.tagName === 'DIV' ) {
+
+						nextTopElement = self.handleNext( nextTopElement, node );
+
+					}
+
+					node = path.pop();
+					children = nextTopElement.childNodes;
+					topElement = nextTopElement;
+
+				}
+
+			}
+
+		}
+
+		function _setHighlight( element ) {
+
+			lastHighlitScroll = 0;
+			self.frame.frame.addEventListener( 'scroll', _onScroll );
+
+			element.classList.add( 'highlight' );
+			element.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+
+			if ( hightlitElement !== null ) _clearHighlight();
+			hightlitElement = element;
+
+		}
+
+		function _clearHighlitElement () {
+
+			self.frame.frame.removeEventListener( 'scroll', _onScroll );
+
+			if ( lastHighlitScroll > performance.now() - 1000 ) {
+
+				setTimeout( _clearHighlight, 1000 );
+
+			} else {
+
+				_clearHighlight();
+
+			}
+
+		}
+
+		function _clearHighlight () {
+
+			if ( hightlitElement == null ) return;
+
+			hightlitElement.classList.remove( 'highlight' );
+			hightlitElement = null;
+			lastHighlitScroll = 0;
+
+		}
+
+		function _onScroll( event ) {
+
+			lastHighlitScroll = event.timeStamp;
+
+		}
+
+	}
+
+	SelectionTreePage.prototype = Object.create( SelectionCommonPage.prototype );
 
 	const legShadingModes = {
 		'shading.height':        SHADING_HEIGHT,
@@ -55608,23 +55936,23 @@
 
 		}
 
-		this.addHeader( 'view.header' );
+		const cvw = this.addCollapsingHeader( 'view.header' );
 
-		this.addSelect( 'view.camera.caption', cameraModes, viewer, 'cameraType' );
+		cvw.appendChild( this.addSelect( 'view.camera.caption', cameraModes, viewer, 'cameraType' ) );
 
 		//	controls.push( this.addRange( 'view.eye_separation', viewer, 'eyeSeparation' ) );
 
-		this.addSelect( 'view.viewpoints.caption', cameraViews, viewer, 'view' );
+		cvw.appendChild( this.addSelect( 'view.viewpoints.caption', cameraViews, viewer, 'view' ) );
 
-		this.addRange( 'view.vertical_scaling', viewer, 'zScale' );
+		cvw.appendChild( this.addRange( 'view.vertical_scaling', viewer, 'zScale' ) );
 
-		this.addCheckbox( 'view.autorotate', viewer, 'autoRotate' );
+		cvw.appendChild( this.addCheckbox( 'view.autorotate', viewer, 'autoRotate' ) );
 
-		this.addRange( 'view.rotation_speed', viewer, 'autoRotateSpeed' );
+		cvw.appendChild( this.addRange( 'view.rotation_speed', viewer, 'autoRotateSpeed' ) );
 
-		this.addHeader( 'shading.header' );
+		const sh = this.addCollapsingHeader( 'shading.header' );
 
-		this.addSelect( 'shading.caption', legShadingModesActive, viewer, 'shadingMode' );
+		sh.appendChild( this.addSelect( 'shading.caption', legShadingModesActive, viewer, 'shadingMode' ) );
 
 		if ( routeNames.length !== 0 ) {
 
@@ -55638,29 +55966,66 @@
 
 		}
 
-		this.addHeader( 'visibility.header' );
+		const cv = this.addCollapsingHeader( 'visibility.header' );
 
-		if ( viewer.hasEntrances       ) this.addCheckbox( 'visibility.entrances', viewer, 'entrances' );
-		if ( viewer.hasStations        ) this.addCheckbox( 'visibility.stations', viewer, 'stations' );
-		if ( viewer.hasStationLabels   ) this.addCheckbox( 'visibility.labels', viewer, 'stationLabels' );
-		if ( viewer.hasStationComments ) this.addCheckbox( 'visibility.comments', viewer, 'stationComments' );
-		if ( viewer.hasSplays          ) this.addCheckbox( 'visibility.splays', viewer, 'splays' );
-		if ( viewer.hasWalls           ) this.addCheckbox( 'visibility.walls', viewer, 'walls' );
-		if ( viewer.hasScraps          ) this.addCheckbox( 'visibility.scraps', viewer, 'scraps' );
-		if ( viewer.hasTraces          ) this.addCheckbox( 'visibility.traces', viewer, 'traces' );
+		if ( viewer.hasEntrances       ) cv.appendChild( this.addCheckbox( 'visibility.entrances', viewer, 'entrances' ) );
+		if ( viewer.hasStations        ) cv.appendChild( this.addCheckbox( 'visibility.stations', viewer, 'stations' ) );
+		if ( viewer.hasStationLabels   ) cv.appendChild( this.addCheckbox( 'visibility.labels', viewer, 'stationLabels' ) );
+		if ( viewer.hasStationComments ) cv.appendChild( this.addCheckbox( 'visibility.comments', viewer, 'stationComments' ) );
+		if ( viewer.hasSplays          ) cv.appendChild( this.addCheckbox( 'visibility.splays', viewer, 'splays' ) );
+		if ( viewer.hasWalls           ) cv.appendChild( this.addCheckbox( 'visibility.walls', viewer, 'walls' ) );
+		if ( viewer.hasScraps          ) cv.appendChild( this.addCheckbox( 'visibility.scraps', viewer, 'scraps' ) );
+		if ( viewer.hasTraces          ) cv.appendChild( this.addCheckbox( 'visibility.traces', viewer, 'traces' ) );
 
-		this.addCheckbox( 'visibility.fog', viewer, 'fog' );
-		this.addCheckbox( 'visibility.hud', viewer, 'HUD' );
-		this.addCheckbox( 'visibility.box', viewer, 'box' );
+		cv.appendChild( this.addCheckbox( 'visibility.fog', viewer, 'fog' ) );
+		cv.appendChild( this.addCheckbox( 'visibility.hud', viewer, 'HUD' ) );
+		cv.appendChild( this.addCheckbox( 'visibility.box', viewer, 'box' ) );
 
-		if ( viewer.hasWarnings ) this.addCheckbox( 'visibility.warnings', viewer, 'warnings' );
+		if ( viewer.hasWarnings ) cv.appendChild( this.addCheckbox( 'visibility.warnings', viewer, 'warnings' ) );
 
-		this.addHeader( 'controls.header' );
+		const ch = this.addCollapsingHeader( 'controls.header' );
 
-		this.addCheckbox( 'controls.svx_control_mode', viewer, 'svxControlMode' );
-		this.addCheckbox( 'controls.zoom_to_cursor', viewer, 'zoomToCursor' );
+		ch.appendChild( this.addCheckbox( 'controls.svx_control_mode', viewer, 'svxControlMode' ) );
+		ch.appendChild( this.addCheckbox( 'controls.zoom_to_cursor', viewer, 'zoomToCursor' ) );
+		ch.appendChild( this.addCheckbox( 'ui.selection_tree', viewer.ctx.cfg, 'selectionTree' ) );
 
-		if ( viewer.svxControlMode ) this.addCheckbox( 'controls.wheel_tilt', viewer, 'wheelTilt' );
+		if ( viewer.svxControlMode ) ch.appendChild( this.addCheckbox( 'controls.wheel_tilt', viewer, 'wheelTilt' ) );
+
+		if ( this.canDownload() ) {
+
+			const eh = this.addCollapsingHeader( 'gltf_export.header' );
+
+			const selection = { legs: false, walls: false, scraps: false  };
+			const options = { rotate: false, binary: false };
+
+			if ( viewer.hasWalls ) {
+
+				selection.walls = true;
+				eh.appendChild( this.addCheckbox( 'gltf_export.walls', selection, 'walls' ) );
+
+			}
+
+			if ( viewer.hasScraps ) {
+
+				selection.scraps = true;
+				eh.appendChild( this.addCheckbox( 'gltf_export.scraps', selection, 'scraps' ) );
+
+			}
+
+			eh.appendChild( this.addCheckbox( 'gltf_export.legs', selection, 'legs' ) );
+
+			eh.appendChild( this.addCheckbox( 'gltf_export.rotate_axes', options, 'rotate' ) );
+			//eh.appendChild( this.addCheckbox( 'gltf_export.binary_format', options, 'binary' );
+
+			eh.appendChild( this.addButton( 'gltf_export.export', function () {
+
+				viewer.getGLTFExport( selection, options, handleExport );
+
+			} ) );
+
+		}
+
+		const self = this;
 
 		_onChange( { name: 'cameraType' } );
 		_onChange( { name: 'shadingMode' } );
@@ -55683,6 +56048,14 @@
 				frame.setControlsVisibility( controls, viewer.cameraType === CAMERA_ANAGLYPH || viewer.cameraType === CAMERA_STEREO );
 
 			}
+
+		}
+
+		function handleExport ( gltfData, binary ) {
+
+			var filename = replaceExtension( fileSelector.localFilename, ( binary ? 'glb' : 'gltf' ) );
+
+			self.download( URL.createObjectURL( gltfData ), filename );
 
 		}
 
@@ -55940,12 +56313,10 @@
 
 	TracePanel.prototype = Object.create( Panel.prototype );
 
-	//import { AnnotatePanel } from './AnnotatePanel';
 	//import { EntrancePanel } from './EntrancePanel';
 
 	const mode = {
 		'modes.none': MOUSE_MODE_NORMAL,
-		//	'modes.annotate': MOUSE_MODE_ANNOTATE,
 		// 'modes.entrances': MOUSE_MODE_ENTRANCES,
 		'modes.route': MOUSE_MODE_ROUTE_EDIT,
 		'modes.trace': MOUSE_MODE_TRACE_EDIT
@@ -55962,12 +56333,9 @@
 
 		var initialState;
 
-		// var annotatePanel = null;
 		var routePanel = null;
 		var tracePanel = null;
 		// var entrancePanel = null;
-
-		this.addHeader( 'header' );
 
 		this.addSelect( 'mode', mode, viewer, 'editMode' );
 
@@ -56010,14 +56378,6 @@
 
 					break;
 
-				case MOUSE_MODE_ANNOTATE:
-
-					if ( annotatePanel === null ) annotatePanel = new AnnotatePanel( self, viewer );
-
-					newState.stations = true;
-					newState.annotations = true;
-
-					break;
 				*/
 
 				}
@@ -56026,7 +56386,6 @@
 
 				frame.setControlsVisibility( intro, viewer.editMode === MOUSE_MODE_NORMAL );
 
-				// if ( annotatePanel !== null ) annotatePanel.setVisibility( viewer.editMode === MOUSE_MODE_ANNOTATE );
 				// if ( entrancePanel !== null ) entrancePanel.setVisibility( viewer.editMode === MOUSE_MODE_ENTRANCES );
 				if ( routePanel !== null ) routePanel.setVisibility( viewer.editMode === MOUSE_MODE_ROUTE_EDIT );
 				if ( tracePanel !== null ) tracePanel.setVisibility( viewer.editMode === MOUSE_MODE_TRACE_EDIT );
@@ -56040,7 +56399,6 @@
 			// save initial view settings
 
 			initialState = {
-				// annotations: viewer.annotations,
 				shadingMode: viewer.shadingMode,
 				// entrances: viewer.entrances,
 				stations: viewer.stations,
@@ -56555,6 +56913,7 @@
 		this.loadedFile = null;
 		this.isMultiple = false;
 		this.splash = null;
+		this.localFilename = null;
 
 		const self = this;
 
@@ -56681,12 +57040,14 @@
 
 			if ( file.length === 1 ) {
 
-				this.selectedFile = file.name;
+				this.localFilename = file[ 0 ].name;
+				this.selectedFile = file[ 0 ];
 				this.isMultiple = false;
 
 			} else {
 
 				this.selectedFile = '[multiple]';
+				this.localFilename = 'multiple';
 				this.isMultiple = true;
 
 			}
@@ -56694,6 +57055,7 @@
 		} else {
 
 			this.selectedFile = file;
+			this.localFilename = file;
 
 		}
 
@@ -56719,8 +57081,8 @@
 		const fileSelector = new FileSelector( container, ctx );
 		fileSelector.addEventListener( 'selected', selectFile );
 
-		// target with css for fullscreen on small screen devices
-		container.classList.add( 'cv-container' );
+		// add active property for runtime selection mode
+		cfg.setPropertyValue( 'selectionTree', true ) ;
 
 		// event handlers
 		viewer.addEventListener( 'change', frame.handleChange.bind( frame ) );
@@ -56760,7 +57122,15 @@
 
 			if ( viewer.hasSurfaceLegs || viewer.hasTerrain ) new SurfacePage( frame, viewer );
 
-			new SelectionPage( frame, viewer, container, fileSelector );
+			if ( cfg.selectionTree ) {
+
+				new SelectionTreePage( frame, viewer, container, fileSelector );
+
+			} else {
+
+				new SelectionPage( frame, viewer, container, fileSelector );
+
+			}
 
 			if ( cfg.value( 'showEditPage', false ) && ! fileSelector.isMultiple ) new EditPage( frame, viewer, fileSelector );
 
@@ -56826,7 +57196,6 @@
 	exports.DIVING = DIVING;
 	exports.FACE_SCRAPS = FACE_SCRAPS;
 	exports.FACE_WALLS = FACE_WALLS;
-	exports.FEATURE_ANNOTATIONS = FEATURE_ANNOTATIONS;
 	exports.FEATURE_BOX = FEATURE_BOX;
 	exports.FEATURE_ENTRANCES = FEATURE_ENTRANCES;
 	exports.FEATURE_SELECTED_BOX = FEATURE_SELECTED_BOX;
@@ -56841,7 +57210,6 @@
 	exports.LEG_SURFACE = LEG_SURFACE;
 	exports.MATERIAL_LINE = MATERIAL_LINE;
 	exports.MATERIAL_SURFACE = MATERIAL_SURFACE;
-	exports.MOUSE_MODE_ANNOTATE = MOUSE_MODE_ANNOTATE;
 	exports.MOUSE_MODE_DISTANCE = MOUSE_MODE_DISTANCE;
 	exports.MOUSE_MODE_ENTRANCES = MOUSE_MODE_ENTRANCES;
 	exports.MOUSE_MODE_NORMAL = MOUSE_MODE_NORMAL;
