@@ -33,6 +33,7 @@ function onload () {
 		showEditPage: true,
 		showExportPage: true,
 		useGPS: true,
+		useGridFiles: true,
 //		loadMetadata: true,
 		view: { walls: false, alpha: false, terrain: false },
 		saturatedGradient: true,
@@ -58,6 +59,7 @@ function onload () {
 //	viewer.addFormatters( OSGBStationFormatter );
 
 	const caves = [
+		"P8_Master.3d",
 		"buffalora-caveview-issue50.lox",
 		"Dales/threecounties.3d",
 		"Castleton_Master_NoSurface.3d",
@@ -65,7 +67,6 @@ function onload () {
 			name: 'Dales',
 			files: [ "Dales/threecounties.3d", "Dales/Ingleborough-AREA.3d", "Dales/fountainsfell.3d" ]
 		},
-		"P8_Master.3d",
 		"durzon.lox",
 		"titan.3d",
 		"all.3d",
