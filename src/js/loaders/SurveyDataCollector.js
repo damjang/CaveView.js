@@ -1,4 +1,4 @@
-import { Box3, Vector3 } from '../Three';
+import { Box3, TextureLoader, Vector3 } from '../Three';
 import { Tree } from '../core/Tree';
 
 import proj4 from 'proj4';
@@ -28,18 +28,22 @@ class SurveyDataCollector {
 
 	}
 
+	static gridfiles = [];
+
 	async lookupCRS( code ) {
 
 		console.log( `looking up CRS code EPSG: ${code}` );
 
 		return fetch( `https://epsg.io/${code}.proj4` )
 		.then( response => response.ok ? response.text() : null )
-		.catch( function () { console.log( 'CRS lookup failed' ); } );
+		.catch( function () { console.warn( 'CRS lookup failed' ); } );
 
 
 	}
 
 	async setCRS ( sourceCRS ) {
+
+		const cfg = this.ctx.cfg;
 
 		if ( sourceCRS !== null ) {
 
@@ -72,68 +76,62 @@ class SurveyDataCollector {
 
 			}
 
-			const cfg = this.ctx.cfg;
+			if ( sourceCRS === null ) {
+
+				sourceCRS = cfg.value( 'defaultCRS', null );
+
+				if ( sourceCRS !== null ) console.log( `Using default projection: ${sourceCRS}` );
+
+			}
 
 			if ( sourceCRS !== null ) {
+
+				let hasGrid = false;
 
 				if ( cfg.value( 'useGridFiles', false ) ) {
 
 					const matches = sourceCRS.match( /\+nadgrids=(\S+)(?:\s.*|$)/ );
-	
+
 					if ( matches ) {
-	
+
 						const gridfile = matches[ 1 ];
-	
-						return fetch( cfg.value( 'surveyDirectory', '' ) + gridfile )
-						.then( response => response.ok ? response.arrayBuffer() : null )
-						.then( buffer => {
-	
+
+						if ( SurveyDataCollector.gridfiles.find( filename => filename === gridfile ) ) {
+
+							hasGrid = true;
+
+						} else {
+
+							const buffer = await fetch( cfg.value( 'surveyDirectory', '' ) + gridfile )
+							.then( response => response.ok ? response.arrayBuffer() : null );
+
 							if ( buffer === null ) {
-	
-								console.log( 'missing grid file', gridfile );
-								sourceCRS = sourceCRS.replace( /\+nadgrids=\S+/, '' );
-	
+
+								console.warn( 'missing grid file', gridfile );
+
 							} else {
-	
+
 								console.log( 'set nadgrid', gridfile );
+
+								hasGrid = true;
 								proj4.nadgrid( gridfile, buffer );
-	
+								SurveyDataCollector.gridfiles.push( gridfile );
+
 							}
-	
-							this._setCRS( sourceCRS );
-	
-						} );
-	
+
+						}
+
 					}
-	
-				} else {
-	
-					sourceCRS = sourceCRS.replace( /\+nadgrids=\S+/, '' );
-	
+
 				}
+
+				if ( ! hasGrid ) sourceCRS = sourceCRS.replace( /\+nadgrids=\S+/, '' );
 
 			}
 
 		}
 
-		this._setCRS( sourceCRS );
-
-		return Promise.resolve( null );
-
-	}
-
-	_setCRS ( sourceCRS ) {
-
-		const cfg = this.ctx.cfg;
 		const displayCRS = cfg.value( 'displayCRS', 'EPSG:3857' );
-
-		if ( sourceCRS === null ) {
-
-			sourceCRS = cfg.value( 'defaultCRS', null );
-
-			if ( sourceCRS !== null ) console.log( `Using default projection: ${sourceCRS}` );
-
-		}
 
 		if ( sourceCRS !== null ) {
 
