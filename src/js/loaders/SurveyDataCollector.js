@@ -1,4 +1,4 @@
-import { Box3, TextureLoader, Vector3 } from '../Three';
+import { Box3, Vector3 } from '../Three';
 import { Tree } from '../core/Tree';
 
 import proj4 from 'proj4';
