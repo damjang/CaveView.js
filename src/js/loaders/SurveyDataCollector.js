@@ -28,61 +28,43 @@ class SurveyDataCollector {
 
 	}
 
-	setCRS ( sourceCRS ) {
+	async lookupCRS( code ) {
+
+		console.log( `looking up CRS code EPSG: ${code}` );
+
+		return fetch( `https://epsg.io/${code}.proj4` )
+		.then( response => response.ok ? response.text() : null )
+		.catch( function () { console.log( 'CRS lookup failed' ); } );
+
+
+	}
+
+	async setCRS ( sourceCRS ) {
 
 		if ( sourceCRS !== null ) {
 
 			// work around lack of +init string support in proj4js
 
-			const matches = sourceCRS.match( /\+init=(\S+)(\s.*|$)/ );
+			const matches = sourceCRS.match( /\+init=(\S+)(?:\s.*|$)/ );
+			const init = matches === null ? sourceCRS : matches[ 1 ];
 
-			let init;
-
-			if ( matches && matches.length === 3 ) {
-
-				init = matches[ 1 ];
-
-			} else {
-
-				init = sourceCRS.toLowerCase();
-
-			}
-
-			let code;
-
-			switch ( init ) {
-
-			case 'epsg:27700' :
+			if ( init.toLowerCase() === 'epsg:27700' ) {
 
 				sourceCRS = '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +nadgrids=OSTN15_NTv2_OSGBtoETRS.gsb +no_defs';
 
-				break;
+			} else {
 
-			default:
-
-				code = init.match( /(epsg|esri):([0-9]+)/ );
+				const code = init.match( /(epsg|esri):([0-9]+)/ );
 
 				if ( code !== null ) {
 
-					console.log( `looking up CRS code EPSG: ${code[ 2 ]}` );
-
-					return fetch( `https://epsg.io/${code[ 2 ]}.proj4` )
-						.then( response => {
-
-							return response.text();
-
-						} ).then( text => {
-
-							this._setCRS( text );
-
-						} ).catch( function () { console.log( 'CRS lookup failed' ); } );
+					sourceCRS = await this.lookupCRS( code[ 2 ] );
 
 				} else {
 
 					if ( ! sourceCRS.match( /^\+proj/ ) ) {
 
 						sourceCRS = null;
-						console.log( 'got proj');
 
 					}
 
@@ -90,49 +72,45 @@ class SurveyDataCollector {
 
 			}
 
-		}
-
-
-		if ( sourceCRS !== null ) {
-
 			const cfg = this.ctx.cfg;
-			const useGridFiles =  cfg.value( 'useGridFiles', false );
 
-			console.log( 'use grid files ', useGridFiles );
+			if ( sourceCRS !== null ) {
 
-			if ( useGridFiles ) {
+				if ( cfg.value( 'useGridFiles', false ) ) {
 
-				const matches = sourceCRS.match( /\+nadgrids=(\S+)(\s.*|$)/ );
-
-				if ( matches && matches.length === 3 ) {
-
-					const gridfile = matches[ 1 ];
-
-					return fetch( cfg.value( 'surveyDirectory', '' ) + gridfile )
-					.then( r => r.ok ? r.arrayBuffer() : null )
-					.then( buffer => {
-
-						if ( buffer === null ) {
-
-							console.log( 'missing grid file', gridfile );
-							sourceCRS = sourceCRS.replace( /\+nadgrids=\S+/, '' );
-
-						} else {
-
-							console.log( 'set nadgrid', gridfile );
-							proj4.nadgrid( gridfile, buffer );
-
-						}
-
-						this._setCRS( sourceCRS );
-
-					} );
-
+					const matches = sourceCRS.match( /\+nadgrids=(\S+)(?:\s.*|$)/ );
+	
+					if ( matches ) {
+	
+						const gridfile = matches[ 1 ];
+	
+						return fetch( cfg.value( 'surveyDirectory', '' ) + gridfile )
+						.then( response => response.ok ? response.arrayBuffer() : null )
+						.then( buffer => {
+	
+							if ( buffer === null ) {
+	
+								console.log( 'missing grid file', gridfile );
+								sourceCRS = sourceCRS.replace( /\+nadgrids=\S+/, '' );
+	
+							} else {
+	
+								console.log( 'set nadgrid', gridfile );
+								proj4.nadgrid( gridfile, buffer );
+	
+							}
+	
+							this._setCRS( sourceCRS );
+	
+						} );
+	
+					}
+	
+				} else {
+	
+					sourceCRS = sourceCRS.replace( /\+nadgrids=\S+/, '' );
+	
 				}
-
-			} else {
-
-				sourceCRS = sourceCRS.replace( /\+nadgrids=\S+/, '' );
 
 			}
 
@@ -157,7 +135,6 @@ class SurveyDataCollector {
 
 		}
 
-		// FIXME use NAD grid corrections OSTM15 etc ( UK Centric )
 		if ( sourceCRS !== null ) {
 
 			this.sourceCRS = sourceCRS;
