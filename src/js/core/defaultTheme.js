@@ -32,7 +32,12 @@ const defaultTheme = {
 			bar: 'yellow',
 			marks: 'white'
 		},
-		cursor: 'yellow'
+		cursor: 'yellow',
+		cursorText: {
+			text: 'yellow',
+			background: '#444444',
+			font: 'bold helvetica,sans-serif'
+		}
 	},
 	box: {
 		bounding: 'white',
@@ -48,13 +53,13 @@ const defaultTheme = {
 		font: 'normal Arial, sans-serif',
 		default: {
 			text: 'white',
-			background: 'rgba( 0.0, 0.0, 0.0, 0.75 ) ',
 			font: 'normal Arial, sans-serif',
 			marker: 'red'
 		},
 		entrances: {
 			text: 'white',
 			background: 'darkred',
+			font: 'normal helvetica,sans-serif',
 			marker: 'white',
 			angle: 45,
 		},
