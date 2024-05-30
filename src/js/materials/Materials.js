@@ -18,7 +18,7 @@ import { TextureCache } from '../core/TextureCache';
 
 import {
 	BackSide,
-	Color, DoubleSide, FrontSide, IncrementStencilOp, LineBasicMaterial,
+	Color, FrontSide, IncrementStencilOp, LineBasicMaterial,
 	MeshBasicMaterial, MeshLambertMaterial, MeshPhongMaterial, Vector2, Vector3
 } from '../Three';
 

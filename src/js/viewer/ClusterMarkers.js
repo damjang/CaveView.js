@@ -266,8 +266,6 @@ class ClusterMarkers extends Object3D {
 		this.labels = [];
 		this.ctx = ctx;
 
-		const cfg = ctx.cfg;
-
 		const material = ctx.materials.getLabelMaterial( 'stations.entrances' );
 
 		material.depthTest = true;
