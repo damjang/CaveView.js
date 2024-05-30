@@ -391,7 +391,7 @@ function Materials ( viewer ) {
 				size: cfg.themeValue( `${type}.fontsize` )
 			};
 
-			material = this.getGlyphMaterial( atlasSpec, 0 );
+			material = this.getGlyphMaterial( atlasSpec, cfg.themeValue( `${type}.angle`, 0 ) );
 
 		}
 
