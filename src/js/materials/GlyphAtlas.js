@@ -4,9 +4,11 @@ class GlyphAtlas {
 
 	constructor ( glyphAtlasSpec ) {
 
-		const atlasSize = 512;
-		const fontSize = 18;
-		const cellSize = 32;
+		const atlasSize = 1024;
+		const fontSize = glyphAtlasSpec.size || 18;
+		const exp = Math.round( Math.log2( fontSize ) + 1 );
+		const cellSize = Math.pow( 2, exp );
+		const baseOffset = ( cellSize - fontSize ) / 2;
 
 		const divisions = atlasSize / cellSize;
 		const canvas = document.createElement( 'canvas' );
@@ -69,7 +71,7 @@ class GlyphAtlas {
 
 			map[ glyph ] = glyphData;
 
-			ctx.fillText( glyph, cellSize * column, cellSize * row - 7 );
+			ctx.fillText( glyph, cellSize * column, cellSize * row - baseOffset );
 
 			return glyphData;
 

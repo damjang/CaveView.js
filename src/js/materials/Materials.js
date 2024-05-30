@@ -387,7 +387,8 @@ function Materials ( viewer ) {
 			const atlasSpec = {
 				color: cfg.themeColorCSS( `${type}.text` ),
 				background: cfg.themeValue( `${type}.background` ),
-				font: cfg.themeValue( `${type}.font` )
+				font: cfg.themeValue( `${type}.font` ),
+				size: cfg.themeValue( `${type}.fontsize` )
 			};
 
 			material = this.getGlyphMaterial( atlasSpec, 0 );
